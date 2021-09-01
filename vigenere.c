@@ -1,4 +1,5 @@
 #include <ctype.h>
+#include <math.h>
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -56,8 +57,81 @@ char* trim(char* s) {
   return new;
 }
 
+double frequency_of_letter(char letter) {
+  double lookup[] = {
+      0.1463,  // A
+      0.0104,  // B
+      0.0388,  // C
+      0.0501,  // D
+      0.1257,  // E
+      0.0102,  // F
+      0.0130,  // G
+      0.0128,  // H
+      0.0618,  // I
+      0.0040,  // J
+      0.0002,  // K
+      0.0278,  // L
+      0.0474,  // M
+      0.0505,  // N
+      0.1073,  // O
+      0.0252,  // P
+      0.0120,  // Q
+      0.0653,  // R
+      0.0781,  // S
+      0.0434,  // T
+      0.0463,  // U
+      0.0167,  // V
+      0.0001,  // W
+      0.0021,  // X
+      0.0001,  // Y
+      0.0047,  // Z
+  };
+
+  letter = toupper(letter);
+  if (letter > 'Z' || letter < 'A') return 0;
+  return lookup[letter - 'A'];
+}
+
+double sinkov(char* str) {
+  double sum = 0;
+  for (int i = 0; str[i]; i++) {
+    sum += log10(1000 * frequency_of_letter(str[i]));
+  }
+  return sum;
+}
+
+void teste() {
+  char* str = "MXOXYBKPSLZBZLKPBDRFRABZFCOXOXJBKPXDBJ";
+  char* key = malloc(2);
+  char* best_key = malloc(2);
+
+  key[1] = '\0';
+  best_key[1] = '\0';
+
+  double best_prob = 0;
+
+  for (int i = 'A'; i <= 'Z'; i++) {
+    key[0] = i;
+    char* result = vigenere(str, key, true);
+    double prob = sinkov(result);
+
+    if (prob > best_prob) {
+      best_prob = prob;
+      best_key[0] = i;
+    }
+    free(result);
+  }
+
+  char* result = vigenere(str, best_key, true);
+  printf("Conteudo de %s: %s (chave %s, LW score %lf)\n", str, result, best_key,
+         sinkov(result));
+  free(result);
+}
+
 int main() {
   srand(time(NULL));
+
+  teste();
 
   char* str = NULL;
   char* key = NULL;

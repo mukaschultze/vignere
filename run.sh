@@ -1,3 +1,3 @@
 rm a.out
-gcc -Wall vigenere.c
+gcc -Wall -lm vigenere.c
 ./a.out
