@@ -23,19 +23,14 @@ char recta(char a, char b, int op) {
 }
 
 char* vigenere(char* str, char* key, bool decrypt) {
-  int lenStr = strlen(str);
+  int len = strlen(str);
   int lenKey = strlen(key);
-
-  if (lenStr != lenKey)
-    printf("Key and message length differ, %d and %d\n", lenKey, lenStr);
-
-  int len = lenStr > lenKey ? lenKey : lenStr;
 
   char* result = malloc(len);
   int op = decrypt ? -1 : 1;
 
   for (int i = 0; i < len; i++) {
-    result[i] = recta(str[i], key[i], op);
+    result[i] = recta(str[i], key[i % lenKey], op);
   }
 
   return result;
