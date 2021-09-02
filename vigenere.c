@@ -100,38 +100,147 @@ double sinkov(char* str) {
   return sum;
 }
 
-void teste() {
-  char* str = "MXOXYBKPSLZBZLKPBDRFRABZFCOXOXJBKPXDBJ";
+int hamming_char(char a, char b) {
+  int sum = 0;
+  for (int i = 0; i < 8; i++) {
+    sum += ((a ^ b) >> i) & 1;
+  }
+  return sum;
+}
+
+int hamming_str(char* a, char* b) {
+  int sum = 0;
+  for (int i = 0; a[i] && b[i]; i++) {
+    sum += hamming_char(a[i], b[i]);
+  }
+  return sum;
+}
+
+char break_single_char_key(char* chypher) {
+  char best_key;
   char* key = malloc(2);
-  char* best_key = malloc(2);
 
   key[1] = '\0';
-  best_key[1] = '\0';
 
   double best_prob = 0;
 
   for (int i = 'A'; i <= 'Z'; i++) {
     key[0] = i;
-    char* result = vigenere(str, key, true);
+    char* result = vigenere(chypher, key, true);
     double prob = sinkov(result);
+    free(result);
 
     if (prob > best_prob) {
       best_prob = prob;
-      best_key[0] = i;
+      best_key = i;
     }
-    free(result);
   }
 
-  char* result = vigenere(str, best_key, true);
-  printf("Conteudo de %s: %s (chave %s, LW score %lf)\n", str, result, best_key,
-         sinkov(result));
+  free(key);
+  return best_key;
+}
+
+double normalized_distance(char* cypher, int key_size, int skip) {
+  char* a = malloc(key_size + 1);
+  char* b = malloc(key_size + 1);
+
+  a[key_size] = '\0';
+  b[key_size] = '\0';
+
+  for (int i = 0; i < key_size; i++) {
+    a[i] = cypher[i + skip];
+    b[i] = cypher[i + skip + key_size];
+  }
+  int dist = hamming_str(a, b);
+
+  free(a);
+  free(b);
+
+  return (double)dist / (key_size - 1);
+}
+
+char* break_cypher(char* chyper, int key_size) {
+  int block_size = key_size;
+
+  char* probable_key = malloc(key_size + 1);
+  char* block_str = malloc(block_size + 1);
+
+  probable_key[key_size] = '\0';
+  block_str[block_size] = '\0';
+
+  for (int block_idx = 0; block_idx < key_size; block_idx++) {
+    for (int i = 0; i < block_size; i++) {
+      block_str[i] = chyper[i * block_size + block_idx];
+      // block_str[i] = chyper[i + block_size * block_idx];
+    }
+    probable_key[block_idx] = break_single_char_key(block_str);
+    // printf("%s, %c\n", block_str, probable_key[block_idx]);
+  }
+
+  printf("Possivel chave: %s\n", probable_key);
+  char* result = vigenere(chyper, probable_key, true);
+  free(probable_key);
+  free(block_str);
+  return result;
+}
+
+void etapa_3() {
+  char* cypher =
+      "UVORVPSMAKSWLHWJGQIUAARNRLRAWTGXIFCEUARRWCKKOXEEMLIYJIIORYSRNDBYEJRYPPSV"
+      "IFUXSNIRVNHQJMGIQHIOIHJMWSXEFVVPWFLGYSPSHEMVGRAIYGEXRGYMMRFBHWWYVJDNMQGA"
+      "EQUSHGLQEOJGUHYHJWPKAITIWZKCIMSFIYJILBXSXDEUEMIGGVRJWMZVEYORETKIGOARLFQD"
+      "FWUAVPHJWYSFVLYAHUDIXJWPNFSUWPEGFTRFLSJVYPRAWWLIWSVIADQLQJSKDXDWHIADFDFU"
+      "SWLIYSDIPVRHGKIOEJRASVWLIDDJSBVMWSSZGQEQHWHGZRICEEXVUXSDIBVQHIWQGZPDHWGG"
+      "CGXHSHKGSLGVIADLRHDMTBRXAKMZVHHVWPYZRTIWTGIEDPSWZVGHFWYWLIUCWRZIEUBSVKUI"
+      "SFGQUMIUIEHKSEWSBYTKEUJAEOEXHFFIZLQJFMTUUIWWWXKJHHQGRTVGWWUYZVYTIWVUVRWF"
+      "SVTRVHRWTXFQRJWVADHHPSXKAYQHSVBZELBLIXEIWIEKXLTRRWXOVXHGVIIFRQSUXOTYWRWG"
+      "UERHQLMILXGSSGKJWDFGGNVJHRSQGTQLZAGORHHAAPGFYPVSGQVVPOXMUJSDQSFGUIVCDXGI"
+      "YPJAVAJTDFSEZRGDFGWVISJFSQGJRRXSTGFIXEMIXFIQHJEXEEUSVIVRVDQGRZRGWOJSYCEU"
+      "SKHUEISODSYSEUSKHUXEEOGUAVSFVWJKUESCDMIZEFOJMUTEDJAWGGIOCUIRLPDFIYKCEQOH"
+      "VGRSQNWXKDYPJAHKFTREMIXGEUOKIPFKDFUSSGSVWUEUUIJWDFKIXRUAP";
+
+  int best_keysize_so_far = 0;
+  double best_normalize_so_far = 6000;
+
+  for (int i = 2; i < 30; i++) {
+    int blocks = 20;
+    double normalize = 0;
+    for (int skip = 0; skip <= blocks; skip += i) {
+      normalize += normalized_distance(cypher, i, skip);
+    }
+    normalize /= blocks;
+    if (normalize < best_normalize_so_far) {
+      best_normalize_so_far = normalize;
+      best_keysize_so_far = i;
+    }
+  }
+
+  printf("\nKeysize mais provavel: %d - %lf\n", best_keysize_so_far,
+         best_normalize_so_far);
+
+  char* plain_text = break_cypher(cypher, best_keysize_so_far);
+  printf("Conteudo: %s\n\n", plain_text);
+}
+
+void etapa_1() {
+  char* chypher = "MXOXYBKPSLZBZLKPBDRFRABZFCOXOXJBKPXDBJ";
+  char* best_key = malloc(2);
+
+  best_key[0] = break_single_char_key(chypher);
+  best_key[1] = '\0';
+
+  char* result = vigenere(chypher, best_key, true);
+  printf("Conteudo de %s: %s (chave %s, LW score %lf)\n", chypher, result,
+         best_key, sinkov(result));
   free(result);
+  free(best_key);
 }
 
 int main() {
   srand(time(NULL));
 
-  teste();
+  etapa_1();
+  etapa_3();
 
   char* str = NULL;
   char* key = NULL;
